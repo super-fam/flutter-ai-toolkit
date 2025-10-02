@@ -16,11 +16,13 @@ environment:
 
 dependencies:
   cross_file: ^0.3.4+2
+  file_picker: ^10.3.3
   file_selector: ^1.0.3
   firebase_ai: ^3.0.0
   flutter:
     sdk: flutter
   flutter_context_menu: ^0.3.0
+  flutter_image_compress: ^2.4.0
   flutter_markdown_plus: ^1.0.3
   flutter_picture_taker: ^0.2.0
   google_fonts: ^6.2.1

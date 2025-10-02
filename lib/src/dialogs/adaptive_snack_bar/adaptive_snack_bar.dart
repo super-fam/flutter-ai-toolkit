@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:flutter/material.dart' show ScaffoldMessenger, SnackBar;
+import 'package:flutter/material.dart'
+    show Colors, Material;
 import 'package:flutter/widgets.dart';
-
-import '../../utility.dart';
-import 'cupertino_snack_bar.dart';
 
 /// A utility class for showing adaptive snack bars in Flutter applications.
 ///
@@ -24,33 +22,57 @@ class AdaptiveSnackBar {
   ///   * [context]: The build context in which to show the snack bar.
   ///   * [message]: The text message to display in the snack bar.
   static void show(BuildContext context, String message) {
-    if (isCupertinoApp(context)) {
-      _showCupertinoSnackBar(context: context, message: message);
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
-    }
+    showShortAlert(context, message);
   }
 
-  static void _showCupertinoSnackBar({
-    required BuildContext context,
-    required String message,
-    int durationMillis = 4000,
-  }) {
-    const animationDurationMillis = 200;
-    final overlayEntry = OverlayEntry(
+  /// Snackbar overlay helper
+  static void showShortAlert(BuildContext context, String message) {
+    final overlayState = Overlay.of(context);
+    if (overlayState == null) return;
+
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+    final double bottomPadding = keyboardHeight > 0 ? keyboardHeight + 20 : 80;
+
+    late OverlayEntry overlayEntry;
+
+    overlayEntry = OverlayEntry(
       builder:
-          (context) => CupertinoSnackBar(
-            message: message,
-            animationDurationMillis: animationDurationMillis,
-            waitDurationMillis: durationMillis,
+          (context) => Positioned(
+            bottom: bottomPadding,
+            left: 30,
+            right: 30,
+            child: Material(
+              color: Colors.transparent,
+              child: Center(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                    horizontal: 12,
+                  ),
+                  child: Text(
+                    message,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontFamily: "Inter",
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                      letterSpacing: 0.5,
+                      height: 1.33,
+                      color: Colors.white
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ),
           ),
     );
-    Future.delayed(
-      Duration(milliseconds: durationMillis + 2 * animationDurationMillis),
-      overlayEntry.remove,
-    );
-    Overlay.of(context).insert(overlayEntry);
+
+    overlayState.insert(overlayEntry);
+    Future.delayed(const Duration(seconds: 2), () => overlayEntry.remove());
   }
 }
