@@ -28,17 +28,16 @@ class ChatInput extends StatefulWidget {
     this.autofocus = true,
     super.key,
   }) : assert(
-         !(onCancelMessage != null && onCancelStt != null),
-         'Cannot be submitting a prompt and doing stt at the same time',
-       ),
-       assert(
-         !(onCancelEdit != null && initialMessage == null),
-         'Cannot cancel edit of a message if no initial message is provided',
-       );
+          !(onCancelMessage != null && onCancelStt != null),
+          'Cannot be submitting a prompt and doing stt at the same time',
+        ),
+        assert(
+          !(onCancelEdit != null && initialMessage == null),
+          'Cannot cancel edit of a message if no initial message is provided',
+        );
 
   final void Function(String, Iterable<Attachment>) onSendMessage;
-  final void Function(XFile file, Iterable<Attachment> attachments)
-  onTranslateStt;
+  final void Function(XFile file, Iterable<Attachment> attachments) onTranslateStt;
   final ChatMessage? initialMessage;
   final void Function()? onCancelEdit;
   final void Function()? onCancelMessage;
@@ -49,7 +48,7 @@ class ChatInput extends StatefulWidget {
   State<ChatInput> createState() => _ChatInputState();
 }
 
-class _ChatInputState extends State<ChatInput> {
+class _ChatInputState extends State<ChatInput> with WidgetsBindingObserver {
   final _focusNode = FocusNode();
   final _textController = TextEditingController();
   final _waveController = WaveformRecorderController();
@@ -58,6 +57,25 @@ class _ChatInputState extends State<ChatInput> {
   ChatViewModel? _viewModel;
   ChatInputStyle? _inputStyle;
   LlmChatViewStyle? _chatStyle;
+
+  bool _isKeyboardVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _focusNode.removeListener(_handleFocusChange);
+    _textController.dispose();
+    _waveController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -81,11 +99,24 @@ class _ChatInputState extends State<ChatInput> {
   }
 
   @override
-  void dispose() {
-    _textController.dispose();
-    _waveController.dispose();
-    _focusNode.dispose();
-    super.dispose();
+  void didChangeMetrics() {
+    final bottomInset = WidgetsBinding.instance.window.viewInsets.bottom;
+    final newKeyboardVisible = bottomInset > 0;
+
+    if (_isKeyboardVisible != newKeyboardVisible) {
+      setState(() {
+        _isKeyboardVisible = newKeyboardVisible;
+      });
+
+      if (!_isKeyboardVisible && _focusNode.hasFocus) {
+        _focusNode.unfocus();
+      }
+    }
+  }
+
+  void _handleFocusChange() {
+    setState(() {
+    });
   }
 
   @override
@@ -102,111 +133,105 @@ class _ChatInputState extends State<ChatInput> {
           if (_attachments.isNotEmpty) const SizedBox(height: 6),
           ValueListenableBuilder<TextEditingValue>(
             valueListenable: _textController,
-            builder:
-                (context, value, child) => ListenableBuilder(
-                  listenable: _waveController,
-                  builder: (context, child) {
-                    return Row(
-                      children: [
-                        if (_focusNode.hasFocus)
-                          GestureDetector(
-                            onTap: () {
-                              _focusNode.unfocus();
-                            },
-                            child: Padding(
-                              padding: EdgeInsets.only(
-                                left: 8.0,
-                                right: _viewModel!.enableAttachments ? 0 : 8.0,
-                              ),
-                              child: Icon(
-                                Icons.keyboard_hide_rounded,
-                                color: Color(0XFF566170),
-                              ),
-                            ),
+            builder: (context, value, child) => ListenableBuilder(
+              listenable: _waveController,
+              builder: (context, child) {
+                return Row(
+                  children: [
+                    if (_focusNode.hasFocus || _isKeyboardVisible)
+                      GestureDetector(
+                        onTap: () => _focusNode.unfocus(),
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            left: 8.0,
+                            right: _viewModel!.enableAttachments ? 0 : 8.0,
                           ),
-                        if (_viewModel!.enableAttachments)
-                          AttachmentActionBar(
-                            isDisabled: _attachments.isNotEmpty,
-                            onAttachments: onAttachments,
-                          ),
-
-                        if (!_viewModel!.enableAttachments &&
-                            !_focusNode.hasFocus)
-                          const SizedBox(width: 16),
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Color(0xFFD9D9D9)),
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 4,
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _textController,
-                                    focusNode: _focusNode,
-                                    minLines: 1,
-                                    maxLines: 4,
-                                    textInputAction: TextInputAction.newline,
-                                    keyboardType: TextInputType.multiline,
-                                    style: TextStyle(
-                                      color: Colors.black,
-                                      fontSize: 14,
-                                    ),
-                                    decoration: const InputDecoration(
-                                      hintText: 'Type a message...',
-                                      border: InputBorder.none,
-                                      fillColor: Colors.white,
-                                      hintStyle: TextStyle(
-                                        color: Color(0XFF566170),
-                                        fontSize: 14,
-                                      ),
-                                      isDense: true,
-                                      contentPadding: EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 10,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Transform.translate(
-                                  offset: Offset(6, -0.5),
-                                  child: Container(
-                                    height: 40,
-                                    width: 40,
-                                    decoration: const BoxDecoration(
-                                      color: Colors.black87,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: IconButton(
-                                      icon: const Icon(
-                                        Icons.send,
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
-                                      onPressed:
-                                          _inputState ==
-                                                  InputState.canSubmitPrompt
-                                              ? onSubmitPrompt
-                                              : null,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                          child: const Icon(
+                            Icons.keyboard_hide_rounded,
+                            color: Color(0XFF566170),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                      ],
-                    );
-                  },
-                ),
+                      ),
+                    if (_viewModel!.enableAttachments)
+                      AttachmentActionBar(
+                        isDisabled: _attachments.isNotEmpty,
+                        onAttachments: onAttachments,
+                      ),
+                    if (!_viewModel!.enableAttachments && !_focusNode.hasFocus)
+                      const SizedBox(width: 16),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: const Color(0xFFD9D9D9)),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _textController,
+                                focusNode: _focusNode,
+                                minLines: 1,
+                                maxLines: 4,
+                                textInputAction: TextInputAction.newline,
+                                keyboardType: TextInputType.multiline,
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 14,
+                                ),
+                                decoration: const InputDecoration(
+                                  hintText: 'Type a message...',
+                                  border: InputBorder.none,
+                                  fillColor: Colors.white,
+                                  hintStyle: TextStyle(
+                                    color: Color(0XFF566170),
+                                    fontSize: 14,
+                                  ),
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Transform.translate(
+                              offset: const Offset(6, -0.5),
+                              child: Container(
+                                height: 40,
+                                width: 40,
+                                decoration: const BoxDecoration(
+                                  color: Colors.black87,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(
+                                    Icons.send,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                  onPressed:
+                                      _inputState == InputState.canSubmitPrompt
+                                          ? onSubmitPrompt
+                                          : null,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                  ],
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -227,7 +252,6 @@ class _ChatInputState extends State<ChatInput> {
 
   void onSubmitPrompt() {
     assert(_inputState == InputState.canSubmitPrompt);
-
     final text = _textController.text.trim();
     if (text.isEmpty) return;
 
