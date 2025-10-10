@@ -114,7 +114,9 @@ class _LlmChatViewState extends State<LlmChatView>
                                   _associatedResponse == null
                               ? _onEditMessage
                               : null,
-                      onSelectSuggestion: _onSelectSuggestion,
+                      onSelectSuggestion: (suggestion) {
+                        _onSendMessage(suggestion, []);
+                      },
                     ),
                   ),
                   ChatInput(

@@ -33,6 +33,7 @@ class LlmMessageView extends StatelessWidget {
 
         return Row(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
             if (botAvatar != null)
               Padding(
@@ -46,7 +47,7 @@ class LlmMessageView extends StatelessWidget {
                 clipboardText: text,
                 child: Container(
                   decoration: llmStyle.decoration,
-                  alignment: Alignment.centerLeft,
+                  alignment: Alignment.topLeft,
                   padding: const EdgeInsets.all(8),
                   child: text == null
                       ? SizedBox(
