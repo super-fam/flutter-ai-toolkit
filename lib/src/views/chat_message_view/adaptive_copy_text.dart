@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../styles/llm_chat_view_style.dart';
 import '../../utility.dart';
 
@@ -84,7 +85,7 @@ class AdaptiveCopyText extends StatelessWidget {
                     weight: 0.5,
                   ),
                   title: const Text(
-                    'Copy',
+                    'Share',
                     style: TextStyle(
                       fontFamily: "Inter",
                       fontWeight: FontWeight.w500,
@@ -95,7 +96,7 @@ class AdaptiveCopyText extends StatelessWidget {
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
-                    unawaited(copyToClipboard(context, clipboardText));
+                    unawaited(Share.share(clipboardText));
                   },
                 ),
               ],
