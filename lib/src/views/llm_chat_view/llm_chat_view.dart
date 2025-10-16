@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:cross_file/cross_file.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../chat_view_model/chat_view_model.dart';
@@ -100,9 +102,7 @@ class _LlmChatViewState extends State<LlmChatView>
           (context, child) => ChatViewModelProvider(
             viewModel: widget.viewModel,
             child: Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFFBF5)
-              ),
+              decoration: const BoxDecoration(color: Color(0xFFFFFBF5)),
               child: Column(
                 children: [
                   Expanded(
@@ -258,23 +258,58 @@ class _LlmChatViewState extends State<LlmChatView>
 
     final llmMessage = widget.viewModel.provider.history.last;
     if (llmMessage.text == null) {
-      llmMessage.append(
-        error is LlmCancelException
-            ? widget.cancelMessage
-            : widget.errorMessage,
-      );
+      final polishedText = switch (error) {
+        LlmCancelException _ =>
+          "Got it — I’ve stopped that request. You can try again anytime!",
+        LlmSocketException _ =>
+          "Hmm, looks like there’s no internet connection right now. Let’s try again once you’re back online.",
+        _ =>
+          "Oops! Something went wrong on my end. Please try again in a moment.",
+      };
+
+      llmMessage.append(polishedText);
     }
 
     switch (error) {
-      case LlmCancelException():
+      case LlmSocketException _:
+        {
+          await showDialog<void>(
+            context: context,
+            barrierDismissible: true,
+            barrierColor: Colors.black.withOpacity(0.3),
+            useSafeArea: true,
+            builder: (context) {
+              return AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                title: const Text(
+                  'No Internet Connection',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                content: const Text(
+                  'Please check your internet connection and try again.',
+                  style: TextStyle(fontSize: 14),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('OK'),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+      case LlmCancelException _:
         if (widget.onCancelCallback != null) {
           widget.onCancelCallback!(context);
         } else {
           AdaptiveSnackBar.show(context, 'LLM operation canceled by user');
         }
         break;
-      case LlmFailureException():
-      case LlmException():
+      case LlmFailureException _:
+      case LlmException _:
         if (widget.onErrorCallback != null) {
           widget.onErrorCallback!(context, error);
         } else {

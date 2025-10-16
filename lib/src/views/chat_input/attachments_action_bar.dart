@@ -11,7 +11,7 @@ import '../../platform_helper/platform_helper.dart';
 
 /// Helper class for picking files and images
 class PickerHelper {
-  static const int maxPdfSizeMb = 2;
+  static const int maxPdfSizeKb = 400; 
   static const int maxGalleryImages = 4;
 
   static Future<XFile?> openCamera(BuildContext context) async {
@@ -66,10 +66,10 @@ class PickerHelper {
       if (result == null || result.files.isEmpty) return null;
 
       final file = result.files.single;
-      if (file.size > maxPdfSizeMb * 1024 * 1024 && context.mounted) {
+      if (file.size > maxPdfSizeKb * 1024 && context.mounted) {
         AdaptiveSnackBar.show(
           context,
-          'Size exceeded max size (${maxPdfSizeMb}MB)',
+          'Size exceeded max size (${maxPdfSizeKb}KB)',
         );
         return null;
       }
@@ -134,14 +134,14 @@ class _AttachmentActionBarState extends State<AttachmentActionBar> {
             height: 48,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
-              color: Color(0xFF061F3C),
+              color: const Color(0xFF061F3C),
             ),
             child: Icon(icon, size: 20, color: Colors.white),
           ),
           const SizedBox(height: 8),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: "Inter",
               fontWeight: FontWeight.w500,
               fontSize: 14,

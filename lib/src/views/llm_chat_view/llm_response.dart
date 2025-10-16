@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:io';
 
 import '../../llm_exception.dart';
 
@@ -43,6 +44,7 @@ class LlmResponse {
   StreamSubscription<String>? _subscription;
 
   LlmException _exception(dynamic err) => switch (err) {
+    (SocketException _) => const LlmSocketException(),
     (LlmCancelException _) => const LlmCancelException(),
     (final LlmFailureException ex) => ex,
     _ => LlmFailureException(err.toString()),
