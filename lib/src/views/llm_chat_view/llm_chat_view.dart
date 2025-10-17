@@ -84,15 +84,15 @@ class _LlmChatViewState extends State<LlmChatView>
     widget.viewModel.provider.addListener(_onHistoryChanged);
   }
 
-@override
-void dispose() {
-  _pendingPromptResponse?.cancel();
-  _pendingSttResponse?.cancel();
+  @override
+  void dispose() {
+    _pendingPromptResponse?.cancel();
+    _pendingSttResponse?.cancel();
 
-  widget.viewModel.provider.removeListener(_onHistoryChanged);
-  _scrollController.dispose();
-  super.dispose();
-}
+    widget.viewModel.provider.removeListener(_onHistoryChanged);
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -261,8 +261,8 @@ void dispose() {
   Future<void> _showLlmException(LlmException? error) async {
     if (error == null) return;
 
-    final llmMessage = widget.viewModel.provider.history.last;
-    if (llmMessage.text == null) {
+    final llmMessage = widget.viewModel.provider.history.lastOrNull;
+    if (llmMessage != null && llmMessage.text == null) {
       final polishedText = switch (error) {
         LlmCancelException _ =>
           "Got it — I’ve stopped that request. You can try again anytime!",
