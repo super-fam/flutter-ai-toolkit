@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:cross_file/cross_file.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 import '../../chat_view_model/chat_view_model.dart';
 import '../../chat_view_model/chat_view_model_provider.dart';
@@ -30,6 +28,7 @@ class LlmChatView extends StatefulWidget {
     SpeechToTextConverter? speechToText,
     List<String> suggestions = const [],
     String? welcomeMessage,
+    this.onMessageSend,
     this.onCancelCallback,
     this.onErrorCallback,
     this.cancelMessage = 'CANCEL',
@@ -51,6 +50,7 @@ class LlmChatView extends StatefulWidget {
          enableVoiceNotes: enableVoiceNotes,
        );
 
+  Function? onMessageSend;
   final bool enableAttachments;
   final bool enableVoiceNotes;
   late final ChatViewModel viewModel;
@@ -84,12 +84,15 @@ class _LlmChatViewState extends State<LlmChatView>
     widget.viewModel.provider.addListener(_onHistoryChanged);
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-    widget.viewModel.provider.removeListener(_onHistoryChanged);
-  }
+@override
+void dispose() {
+  _pendingPromptResponse?.cancel();
+  _pendingSttResponse?.cancel();
+
+  widget.viewModel.provider.removeListener(_onHistoryChanged);
+  _scrollController.dispose();
+  super.dispose();
+}
 
   @override
   Widget build(BuildContext context) {
@@ -156,6 +159,8 @@ class _LlmChatViewState extends State<LlmChatView>
       onUpdate: (_) => setState(() {}),
       onDone: _onPromptDone,
     );
+
+    widget.onMessageSend?.call();
 
     FocusManager.instance.primaryFocus?.unfocus();
     setState(() {});
