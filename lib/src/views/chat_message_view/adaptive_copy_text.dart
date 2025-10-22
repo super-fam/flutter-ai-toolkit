@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
@@ -96,7 +97,19 @@ class AdaptiveCopyText extends StatelessWidget {
                   ),
                   onTap: () {
                     Navigator.pop(ctx);
-                    unawaited(Share.share(clipboardText));
+                    final rect =
+                        Platform.isIOS
+                            ? const Rect.fromLTWH(
+                              0,
+                              0,
+                              200,
+                              200,
+                            ) // any non-zero rect inside screen bounds
+                            : null;
+
+                    unawaited(
+                      Share.share(clipboardText, sharePositionOrigin: rect),
+                    );
                   },
                 ),
               ],
