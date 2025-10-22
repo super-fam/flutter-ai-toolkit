@@ -1,7 +1,3 @@
-// Copyright 2024 The Flutter Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 import 'package:flutter/widgets.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
@@ -16,95 +12,69 @@ import 'hovering_buttons.dart';
 /// A widget that displays an LLM (Language Model) message in a chat interface.
 @immutable
 class LlmMessageView extends StatelessWidget {
-  /// Creates an [LlmMessageView].
-  ///
-  /// The [message] parameter is required and represents the LLM chat message to
-  /// be displayed.
   const LlmMessageView(
     this.message, {
+    this.botAvatar,
     this.isWelcomeMessage = false,
     super.key,
   });
 
-  /// The LLM chat message to be displayed.
+  final Widget? botAvatar;
   final ChatMessage message;
-
-  /// Whether the message is the welcome message.
   final bool isWelcomeMessage;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Flexible(
-        flex: 6,
-        child: Column(
-          children: [
-            ChatViewModelClient(
-              builder: (context, viewModel, child) {
-                final text = message.text;
-                final chatStyle = LlmChatViewStyle.resolve(viewModel.style);
-                final llmStyle = LlmMessageStyle.resolve(
-                  chatStyle.llmMessageStyle,
-                );
+  Widget build(BuildContext context) {
+    return ChatViewModelClient(
+      builder: (context, viewModel, child) {
+        final text = message.text;
+        final chatStyle = LlmChatViewStyle.resolve(viewModel.style);
+        final llmStyle = LlmMessageStyle.resolve(chatStyle.llmMessageStyle);
 
-                return Stack(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 10),
-                      child: Container(
-                        height: 20,
-                        width: 20,
-                        decoration: llmStyle.iconDecoration,
-                        child: Icon(
-                          llmStyle.icon,
-                          color: llmStyle.iconColor,
-                          size: 12,
-                        ),
-                      ),
-                    ),
-                    HoveringButtons(
-                      isUserMessage: false,
-                      chatStyle: chatStyle,
-                      clipboardText: text,
-                      child: Container(
-                        decoration: llmStyle.decoration,
-                        margin: const EdgeInsets.only(left: 28),
-                        padding: const EdgeInsets.all(8),
-                        child:
-                            text == null
-                                ? SizedBox(
-                                  width: 32,
-                                  child: JumpingDotsProgressIndicator(
-                                    fontSize: 24,
-                                    color: chatStyle.progressIndicatorColor!,
-                                  ),
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            if (botAvatar != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12, right: 8),
+                child: botAvatar!,
+              ),
+            Expanded(
+              child: HoveringButtons(
+                isUserMessage: false,
+                chatStyle: chatStyle,
+                clipboardText: text,
+                child: Container(
+                  decoration: llmStyle.decoration,
+                  alignment: Alignment.topLeft,
+                  padding: const EdgeInsets.all(8),
+                  child: text == null
+                      ? SizedBox(
+                          width: 32,
+                          child: JumpingDotsProgressIndicator(
+                            fontSize: 24,
+                            color: chatStyle.progressIndicatorColor!,
+                          ),
+                        )
+                      : AdaptiveCopyText(
+                          clipboardText: text,
+                          chatStyle: chatStyle,
+                          child: isWelcomeMessage ||
+                                  viewModel.responseBuilder == null
+                              ? MarkdownBody(
+                                  data: text,
+                                  selectable: false,
+                                  styleSheet: llmStyle.markdownStyle,
                                 )
-                                : AdaptiveCopyText(
-                                  clipboardText: text,
-                                  chatStyle: chatStyle,
-                                  child:
-                                      isWelcomeMessage ||
-                                              viewModel.responseBuilder == null
-                                          ? MarkdownBody(
-                                            data: text,
-                                            selectable: false,
-                                            styleSheet: llmStyle.markdownStyle,
-                                          )
-                                          : viewModel.responseBuilder!(
-                                            context,
-                                            text,
-                                          ),
-                                ),
-                      ),
-                    ),
-                  ],
-                );
-              },
+                              : viewModel.responseBuilder!(context, text),
+                        ),
+                ),
+              ),
             ),
           ],
-        ),
-      ),
-      const Flexible(flex: 2, child: SizedBox()),
-    ],
-  );
+        );
+      },
+    );
+  }
 }

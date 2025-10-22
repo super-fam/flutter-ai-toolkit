@@ -50,3 +50,13 @@ class LlmFailureException extends LlmException {
   @override
   String toString() => 'LlmFailureException: $message';
 }
+@immutable
+class LlmSocketException extends LlmException {
+  /// Creates a new [LlmFailureException] with the given error [message].
+  ///
+  /// The [message] parameter is a string describing the failure that occurred.
+  const LlmSocketException([super.message]) : super._();
+
+  @override
+  String toString() => 'LlmSocketException: $message';
+}

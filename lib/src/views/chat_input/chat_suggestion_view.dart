@@ -33,14 +33,18 @@ class ChatSuggestionsView extends StatelessWidget {
       final suggestionStyle = SuggestionStyle.resolve(
         viewModel.style?.suggestionStyle,
       );
-      return Wrap(
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           for (final suggestion in suggestions)
             GestureDetector(
               onTap: () => onSelectSuggestion(suggestion),
               child: Container(
                 margin: const EdgeInsets.all(8),
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(12),
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.7,
+                ),
                 decoration: suggestionStyle.decoration,
                 child: Text(
                   suggestion,

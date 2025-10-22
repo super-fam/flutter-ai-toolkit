@@ -1,35 +1,108 @@
-// Copyright 2024 The Flutter Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
 import 'dart:async';
-
-import 'package:file_selector/file_selector.dart';
-import 'package:flutter/material.dart'
-    show MenuAnchor, MenuItemButton, MenuStyle;
-import 'package:flutter/widgets.dart';
-import 'package:flutter_ai_toolkit/src/utility.dart';
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
-import '../../chat_view_model/chat_view_model_client.dart';
 import '../../dialogs/adaptive_snack_bar/adaptive_snack_bar.dart';
-import '../../platform_helper/platform_helper.dart';
 import '../../providers/interface/attachments.dart';
-import '../../styles/llm_chat_view_style.dart';
-import '../action_button.dart';
+import '../../platform_helper/platform_helper.dart';
 
-/// A widget that provides an action bar for attaching files or images.
-@immutable
+/// Helper class for picking files and images
+class PickerHelper {
+  static const int maxPdfSizeKb = 400; 
+  static const int maxGalleryImages = 4;
+
+  static Future<XFile?> openCamera(BuildContext context) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? photo = await picker.pickImage(source: ImageSource.camera);
+      if (photo != null) return await _compressImage(photo);
+    } on PlatformException {
+      if (context.mounted) {
+        AdaptiveSnackBar.show(context, 'Please enable the Camera permission');
+      }
+    }
+    return null;
+  }
+
+  static Future<List<XFile>?> openGallery(BuildContext context) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: true,
+      );
+      if (result == null || result.files.isEmpty) return null;
+
+      final files = <XFile>[];
+      for (var i = 0; i < result.files.length && i < maxGalleryImages; i++) {
+        files.add(await _compressImage(XFile(result.files[i].path!)));
+      }
+
+      if (result.files.length > maxGalleryImages && context.mounted) {
+        AdaptiveSnackBar.show(
+          context,
+          "You can only select up to $maxGalleryImages images",
+        );
+      }
+
+      return files;
+    } on PlatformException {
+      if (context.mounted) {
+        AdaptiveSnackBar.show(context, 'Please enable the Storage permission');
+      }
+    }
+    return null;
+  }
+
+  static Future<XFile?> openPdf(BuildContext context) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+        allowMultiple: false,
+      );
+      if (result == null || result.files.isEmpty) return null;
+
+      final file = result.files.single;
+      if (file.size > maxPdfSizeKb * 1024 && context.mounted) {
+        AdaptiveSnackBar.show(
+          context,
+          'Size exceeded max size (${maxPdfSizeKb}KB)',
+        );
+        return null;
+      }
+
+      return XFile(file.path!);
+    } on PlatformException {
+      if (context.mounted) {
+        AdaptiveSnackBar.show(context, 'Please enable the Storage permission');
+      }
+    }
+    return null;
+  }
+
+  static Future<XFile> _compressImage(XFile file) async {
+    final targetPath = "${file.path}_compressed.jpg";
+    final compressed = await FlutterImageCompress.compressAndGetFile(
+      file.path,
+      targetPath,
+      quality: 80,
+    );
+    return compressed != null ? XFile(compressed.path) : file;
+  }
+}
+
+/// AttachmentActionBar widget
 class AttachmentActionBar extends StatefulWidget {
-  /// Creates an [AttachmentActionBar].
-  ///
-  /// The [onAttachments] parameter is required and is called when attachments
-  /// are selected.
-  const AttachmentActionBar({required this.onAttachments, super.key});
+  const AttachmentActionBar({
+    required this.onAttachments,
+    required this.isDisabled,
+    super.key,
+  });
 
-  /// Callback function that is called when attachments are selected.
-  ///
-  /// The selected [Attachment]s are passed as an argument to this function.
+  final bool isDisabled;
   final Function(Iterable<Attachment> attachments) onAttachments;
 
   @override
@@ -45,130 +118,127 @@ class _AttachmentActionBarState extends State<AttachmentActionBar> {
     _canCamera = canTakePhoto();
   }
 
-  @override
-  Widget build(BuildContext context) => ChatViewModelClient(
-    builder: (context, viewModel, child) {
-      final chatStyle = LlmChatViewStyle.resolve(viewModel.style);
-      final menuItems = [
-        if (_canCamera)
-          MenuItemButton(
-            leadingIcon: Icon(
-              chatStyle.cameraButtonStyle!.icon!,
-              color: chatStyle.cameraButtonStyle!.iconColor,
+  Widget _buildActionItem({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: const Color(0xFF061F3C),
             ),
-            onPressed: () => _onCamera(),
-            child: Text(
-              chatStyle.cameraButtonStyle!.text!,
-              style: chatStyle.cameraButtonStyle!.textStyle,
+            child: Icon(icon, size: 20, color: Colors.white),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: "Inter",
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+              letterSpacing: 0.5,
+              height: 1.33,
             ),
           ),
-        MenuItemButton(
-          leadingIcon: Icon(
-            chatStyle.galleryButtonStyle!.icon!,
-            color: chatStyle.galleryButtonStyle!.iconColor,
-          ),
-          onPressed: () => _onGallery(),
-          child: Text(
-            chatStyle.galleryButtonStyle!.text!,
-            style: chatStyle.galleryButtonStyle!.textStyle,
-          ),
-        ),
-        MenuItemButton(
-          leadingIcon: Icon(
-            chatStyle.attachFileButtonStyle!.icon!,
-            color: chatStyle.attachFileButtonStyle!.iconColor,
-          ),
-          onPressed: () => _onFile(),
-          child: Text(
-            chatStyle.attachFileButtonStyle!.text!,
-            style: chatStyle.attachFileButtonStyle!.textStyle,
-          ),
-        ),
-      ];
-
-      return MenuAnchor(
-        style: MenuStyle(
-          backgroundColor: WidgetStateProperty.all(chatStyle.menuColor),
-        ),
-        // Force menu above by using negative offset equal to estimated menu
-        // height. NOTE: This is a hack to get the menu to appear above the
-        // button so that it doesn't appear below the soft keyboard. There
-        // should be no reason to set the alignmentOffset at all once this bug
-        // is fixed: https://github.com/flutter/flutter/issues/142921
-        alignmentOffset: _menuAnchorAlignmentOffsetHackForMobile(
-          chatStyle,
-          menuItems.length,
-        ),
-        consumeOutsideTap: true,
-        builder:
-            (_, controller, _) => ActionButton(
-              onPressed: controller.isOpen ? controller.close : controller.open,
-              style: chatStyle.addButtonStyle!,
-            ),
-        menuChildren: menuItems,
-      );
-    },
-  );
-
-  Offset? _menuAnchorAlignmentOffsetHackForMobile(
-    LlmChatViewStyle chatStyle,
-    int menuItems,
-  ) {
-    // Limit the potential damage on this hack to mobile platforms
-    if (!isMobile) return null;
-
-    // From MenuAnchor source: minimum height is 48.0 + some padding for
-    // safety
-    final double itemHeight = 48.0 + 8.0;
-    final double menuPadding = 16.0;
-
-    // Calculate menu height based on actual number of items
-    final double estimatedMenuHeight = (menuItems * itemHeight) + menuPadding;
-    return Offset(0, -estimatedMenuHeight);
+        ],
+      ),
+    );
   }
 
-  void _onCamera() => unawaited(_pickImage(ImageSource.camera));
-  void _onGallery() => unawaited(_pickImage(ImageSource.gallery));
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.add, color: Color(0XFF566170)),
+      onPressed: () {
+        if (widget.isDisabled) {
+          AdaptiveSnackBar.show(context, 'Cannot add attachments anymore');
+          return;
+        }
 
-  Future<void> _pickImage(ImageSource source) async {
-    assert(
-      source == ImageSource.camera || source == ImageSource.gallery,
-      'Unsupported image source: $source',
-    );
+        FocusManager.instance.primaryFocus?.unfocus();
 
-    final picker = ImagePicker();
-    try {
-      if (source == ImageSource.gallery) {
-        final pics = await picker.pickMultiImage();
-        final attachments = await Future.wait(
-          pics.map(ImageFileAttachment.fromFile),
+        showModalBottomSheet(
+          context: context,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          builder: (context) {
+            return Container(
+              padding: const EdgeInsets.all(28.0),
+              width: double.infinity,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (_canCamera)
+                    _buildActionItem(
+                      icon: Icons.camera_alt,
+                      label: "Camera",
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickCamera();
+                      },
+                    ),
+                  _buildActionItem(
+                    icon: Icons.image_rounded,
+                    label: "Gallery",
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickGallery();
+                    },
+                  ),
+                  _buildActionItem(
+                    icon: Icons.folder,
+                    label: "File manager",
+                    onTap: () {
+                      Navigator.pop(context);
+                      _pickPdf();
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
         );
-        widget.onAttachments(attachments);
-      } else {
-        final pic = await takePhoto(context);
-        if (pic == null) return;
-        widget.onAttachments([await ImageFileAttachment.fromFile(pic)]);
-      }
-    } on Exception catch (ex) {
-      if (context.mounted) {
-        // I just checked this! ^^^
-        // ignore: use_build_context_synchronously
-        AdaptiveSnackBar.show(context, 'Unable to pick an image: $ex');
-      }
+      },
+    );
+  }
+
+  void _pickCamera() => unawaited(_handleCamera());
+  void _pickGallery() => unawaited(_handleGallery());
+  void _pickPdf() => unawaited(_handlePdf());
+
+  Future<void> _handleCamera() async {
+    final file = await PickerHelper.openCamera(context);
+    if (file != null) {
+      final attachment = await ImageFileAttachment.fromFile(file);
+      widget.onAttachments([attachment]);
     }
   }
 
-  Future<void> _onFile() async {
-    try {
-      final files = await openFiles();
-      final attachments = await Future.wait(files.map(FileAttachment.fromFile));
+  Future<void> _handleGallery() async {
+    final files = await PickerHelper.openGallery(context);
+    if (files != null && files.isNotEmpty) {
+      final attachments = await Future.wait(
+        files.map(ImageFileAttachment.fromFile),
+      );
       widget.onAttachments(attachments);
-    } on Exception catch (ex) {
-      if (context.mounted) {
-        // I just checked this! ^^^
-        // ignore: use_build_context_synchronously
-        AdaptiveSnackBar.show(context, 'Unable to pick a file: $ex');
-      }
+    }
+  }
+
+  Future<void> _handlePdf() async {
+    final file = await PickerHelper.openPdf(context);
+    if (file != null) {
+      final attachment = await FileAttachment.fromFile(file);
+      widget.onAttachments([attachment]);
     }
   }
 }

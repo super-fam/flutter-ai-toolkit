@@ -71,7 +71,7 @@ class HoveringButtons extends StatelessWidget {
                                 children: [
                                   if (onEdit != null)
                                     GestureDetector(
-                                      onTap: onEdit,
+                                      onLongPress: onEdit,
                                       child: Icon(
                                         chatStyle.editButtonStyle!.icon,
                                         size: _iconSize.toDouble(),
@@ -81,7 +81,7 @@ class HoveringButtons extends StatelessWidget {
                                       ),
                                     ),
                                   GestureDetector(
-                                    onTap:
+                                    onLongPress:
                                         () => unawaited(
                                           copyToClipboard(
                                             context,

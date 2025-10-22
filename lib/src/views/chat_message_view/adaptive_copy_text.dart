@@ -1,31 +1,14 @@
 import 'dart:async';
-
-import 'package:flutter/cupertino.dart' show DefaultCupertinoLocalizations;
-import 'package:flutter/material.dart'
-    show
-        DefaultMaterialLocalizations,
-        SelectionArea,
-        DefaultWidgetsLocalizations;
+import 'dart:io';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_context_menu/flutter_context_menu.dart';
-
+import 'package:share_plus/share_plus.dart';
 import '../../styles/llm_chat_view_style.dart';
 import '../../utility.dart';
 
-/// A widget that displays text with adaptive copy functionality.
-///
-/// This widget provides a context menu for copying text to the clipboard on
-/// mobile devices, and a selection area for mouse-driven selection on desktop
-/// and web platforms.
 @immutable
 class AdaptiveCopyText extends StatelessWidget {
-  /// Creates an [AdaptiveCopyText] widget.
-  ///
-  /// The [clipboardText] parameter is required and contains the text to be
-  /// copied to the clipboard. The [child] parameter is required and contains
-  /// the widget to be displayed. The [chatStyle] parameter is required and
-  /// contains the style information for the chat. The [onEdit] parameter is
-  /// optional and contains the callback to be invoked when the text is edited.
   const AdaptiveCopyText({
     required this.clipboardText,
     required this.child,
@@ -34,42 +17,20 @@ class AdaptiveCopyText extends StatelessWidget {
     super.key,
   });
 
-  /// The text to be copied to the clipboard.
   final String clipboardText;
-
-  /// The widget to be displayed.
   final Widget child;
-
-  /// The callback to be invoked when the text is edited.
   final VoidCallback? onEdit;
-
-  /// The style information for the chat.
   final LlmChatViewStyle chatStyle;
 
   @override
   Widget build(BuildContext context) {
-    final contextMenu = ContextMenu(
-      entries: [
-        if (onEdit != null)
-          MenuItem(
-            label: 'Edit',
-            icon: chatStyle.editButtonStyle!.icon,
-            onSelected: onEdit,
-          ),
-        MenuItem(
-          label: 'Copy',
-          icon: chatStyle.copyButtonStyle!.icon,
-          onSelected: () => unawaited(copyToClipboard(context, clipboardText)),
-        ),
-      ],
-    );
-
-    // On mobile, show the context menu for long-press;
-    // on desktop and web, show the selection area for mouse-driven selection.
     return isMobile
-        ? ContextMenuRegion(contextMenu: contextMenu, child: child)
+        ? GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onLongPress: () => _showBottomSheet(context),
+          child: child,
+        )
         : isCupertinoApp(context)
-        // Ensure MaterialLocalizations is available for SelectionArea
         ? Localizations(
           locale: Localizations.localeOf(context),
           delegates: const [
@@ -80,5 +41,80 @@ class AdaptiveCopyText extends StatelessWidget {
           child: SelectionArea(child: child),
         )
         : SelectionArea(child: child);
+  }
+
+  void _showBottomSheet(BuildContext context) {
+    FocusManager.instance.primaryFocus?.unfocus();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).cardColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder:
+          (ctx) => SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (onEdit != null)
+                  ListTile(
+                    leading: Icon(
+                      chatStyle.editButtonStyle!.icon,
+                      color: Colors.black,
+                      weight: 0.5,
+                    ),
+                    title: const Text(
+                      'Edit',
+                      style: TextStyle(
+                        fontFamily: "Inter",
+                        fontWeight: FontWeight.w500,
+                        fontSize: 16,
+                        letterSpacing: 0.5,
+                        height: 1.33,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      onEdit?.call();
+                    },
+                  ),
+                ListTile(
+                  leading: Icon(
+                    chatStyle.copyButtonStyle!.icon,
+                    color: Colors.black,
+                    weight: 0.5,
+                  ),
+                  title: const Text(
+                    'Share',
+                    style: TextStyle(
+                      fontFamily: "Inter",
+                      fontWeight: FontWeight.w500,
+                      fontSize: 16,
+                      letterSpacing: 0.5,
+                      height: 1.33,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    final rect =
+                        Platform.isIOS
+                            ? const Rect.fromLTWH(
+                              0,
+                              0,
+                              200,
+                              200,
+                            ) // any non-zero rect inside screen bounds
+                            : null;
+
+                    unawaited(
+                      Share.share(clipboardText, sharePositionOrigin: rect),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+    );
   }
 }

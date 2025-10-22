@@ -33,6 +33,7 @@ class UserMessageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.end,
     children: [
       ...[
         for (final attachment in message.attachments)
@@ -56,30 +57,31 @@ class UserMessageView extends StatelessWidget {
             chatStyle.userMessageStyle,
           );
 
-          return Align(
+          return Container(
             alignment: Alignment.topRight,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: HoveringButtons(
-                isUserMessage: true,
-                chatStyle: chatStyle,
-                clipboardText: text,
-                onEdit: onEdit,
-                child: DecoratedBox(
-                  decoration: userStyle.decoration!,
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      left: 16,
-                      right: 16,
-                      top: 12,
-                      bottom: 12,
-                    ),
-                    child: AdaptiveCopyText(
-                      chatStyle: chatStyle,
-                      clipboardText: text,
-                      onEdit: onEdit,
-                      child: Text(text, style: userStyle.textStyle),
-                    ),
+            // padding: const EdgeInsets.only(right: 16),,
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.7
+            ),
+            child: HoveringButtons(
+              isUserMessage: true,
+              chatStyle: chatStyle,
+              clipboardText: text,
+              onEdit: onEdit,
+              child: DecoratedBox(
+                decoration: userStyle.decoration!,
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 12,
+                    bottom: 12,
+                  ),
+                  child: AdaptiveCopyText(
+                    chatStyle: chatStyle,
+                    clipboardText: text,
+                    onEdit: onEdit,
+                    child: Text(text, style: userStyle.textStyle),
                   ),
                 ),
               ),
