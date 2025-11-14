@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../chat_view_model/chat_view_model_client.dart';
 import '../../providers/interface/chat_message.dart';
@@ -57,11 +58,14 @@ class UserMessageView extends StatelessWidget {
             chatStyle.userMessageStyle,
           );
 
+          final llmStyle = LlmMessageStyle.resolve(
+            viewModel.style?.llmMessageStyle,
+          );
           return Container(
             alignment: Alignment.topRight,
             // padding: const EdgeInsets.only(right: 16),,
             constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.7
+              maxWidth: MediaQuery.of(context).size.width * 0.7,
             ),
             child: HoveringButtons(
               isUserMessage: true,
@@ -81,7 +85,10 @@ class UserMessageView extends StatelessWidget {
                     chatStyle: chatStyle,
                     clipboardText: text,
                     onEdit: onEdit,
-                    child: Text(text, style: userStyle.textStyle),
+                    child: MarkdownBody(
+                      data: text,
+                      styleSheet: llmStyle.markdownStyle,
+                    ),
                   ),
                 ),
               ),

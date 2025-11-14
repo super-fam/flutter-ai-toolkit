@@ -1,4 +1,6 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../chat_view_model/chat_view_model_client.dart';
 import '../../styles/suggestion_style.dart';
@@ -33,6 +35,11 @@ class ChatSuggestionsView extends StatelessWidget {
       final suggestionStyle = SuggestionStyle.resolve(
         viewModel.style?.suggestionStyle,
       );
+
+      final llmStyle = LlmMessageStyle.resolve(
+        viewModel.style?.llmMessageStyle,
+      );
+
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -46,11 +53,9 @@ class ChatSuggestionsView extends StatelessWidget {
                   maxWidth: MediaQuery.of(context).size.width * 0.7,
                 ),
                 decoration: suggestionStyle.decoration,
-                child: Text(
-                  suggestion,
-                  softWrap: true,
-                  maxLines: 3,
-                  style: suggestionStyle.textStyle,
+                child: MarkdownBody(
+                  data: suggestion,
+                  styleSheet: llmStyle.markdownStyle,
                 ),
               ),
             ),
