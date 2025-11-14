@@ -42,7 +42,7 @@ class ChatMessage {
   ///     (for files) or a URL (for links).
   factory ChatMessage.fromJson(Map<String, dynamic> map) => ChatMessage(
     origin: MessageOrigin.values.byName(map['origin'] as String),
-    text: map['text'] as String,
+    text: (map['text'] ?? "") as String,
     attachments: [
       for (final attachment in map['attachments'] as List<dynamic>)
         switch (attachment['type'] as String) {
