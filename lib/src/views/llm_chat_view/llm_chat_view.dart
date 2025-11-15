@@ -86,9 +86,6 @@ class _LlmChatViewState extends State<LlmChatView>
 
   @override
   void dispose() {
-    _pendingPromptResponse?.cancel();
-    _pendingSttResponse?.cancel();
-
     widget.viewModel.provider.removeListener(_onHistoryChanged);
     _scrollController.dispose();
     super.dispose();
@@ -156,14 +153,16 @@ class _LlmChatViewState extends State<LlmChatView>
 
     _pendingPromptResponse = LlmResponse(
       stream: sendMessageStream(prompt, attachments: attachments),
-      onUpdate: (_) => setState(() {}),
+      onUpdate: (_) {
+        if (mounted) setState(() {});
+      },
       onDone: _onPromptDone,
     );
 
     widget.onMessageSend?.call();
 
     FocusManager.instance.primaryFocus?.unfocus();
-    setState(() {});
+    if (mounted) setState(() {});
 
     // After updating the state, scroll to the bottom
     // WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -176,6 +175,9 @@ class _LlmChatViewState extends State<LlmChatView>
   }
 
   void _onPromptDone(LlmException? error) {
+    if (!mounted) {
+      return;
+    }
     setState(() => _pendingPromptResponse = null);
     unawaited(_showLlmException(error));
   }
@@ -223,7 +225,7 @@ class _LlmChatViewState extends State<LlmChatView>
           ),
     );
 
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   Stream<String> _convertSpeechToText(XFile file) async* {
