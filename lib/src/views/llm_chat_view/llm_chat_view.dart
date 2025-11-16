@@ -188,11 +188,25 @@ class _LlmChatViewState extends State<LlmChatView>
     assert(_pendingPromptResponse == null);
 
     final history = widget.viewModel.provider.history.toList();
-    assert(history.last.origin.isLlm);
-    final llmMessage = history.removeLast();
 
-    assert(history.last.origin.isUser);
-    final userMessage = history.removeLast();
+    if (history.isEmpty) {
+      return; 
+    }
+
+    final last = history.removeLast();
+
+    ChatMessage? userMessage;
+    ChatMessage? llmMessage;
+
+    if (last.origin.isUser) {
+      userMessage = last;
+    } else if (last.origin.isLlm) {
+      llmMessage = last;
+
+      if (history.isNotEmpty && history.last.origin.isUser) {
+        userMessage = history.removeLast();
+      }
+    }
 
     widget.viewModel.provider.history = history;
 
